@@ -1,91 +1,127 @@
-library(shiny)
-library(shinythemes)
+#---
+# Author: Scott Henderson
+# Last Updated: June 19, 2020
+# Purpose: Summarize RADHOC query reports
+#---
 
-library(readxl)
-library(tidyverse)
-
-library(DT)
+library("shiny")
+library("shinythemes")
+library("tidyverse")
+library("readxl")
+library("openxlsx")
+library("DT")
 
 #---------- DEFINE UI ----------
 
 ui <- fluidPage(
   
-  # Set custom theme
+  # Set custom theme -----
   theme = shinytheme("readable"),
   
-  # App title
+  # App title -----
   titlePanel("RADHOC Tool v1"),
   
-  # Sidebar layout
+  # Sidebar layout -----
   sidebarLayout(
     
-    # Sidebar panel
+    # Sidebar panel -----
     sidebarPanel(
       
-      # Fit company logo
+      # To fit company logo -----
       width = 3,
       
-      #---------- FILE INPUT ----------
+      #---------- IMPORT FILE ----------
       
-      fileInput(inputId = "file1", 
-                label = "Choose a CSV File",
-                multiple = FALSE,
-                accept = c(".csv")),
+      # File options -----
+      fileInput(
+        inputId = "import_file", 
+        label = "Choose a CSV File",
+        multiple = FALSE,
+        accept = c(".csv")
+      ),
       
-      # Horizontal line
+      # Horizontal line -----
       tags$hr(),
       
-      # Company Logo
-      img(src = "360insights-logo.png", 
-          height = 100, 
-          width = 380),
+      # Company Logo -----
+      img(
+        src = "360insights-logo.png", 
+        height = 100, 
+        width = 380
+      ),
       
-      # Horizontal line
+      # Horizontal line -----
       tags$hr(),
       
-      # Download data
-      downloadButton("download_program_count",          # Program count
-                     label = "Download Program Count"),
+      # To download program type count -----
+      downloadButton(
+        "download_program_type_count",          
+        label = "Download Program Type Count"
+      ),
       
-      # 2 breaks to to visually separate download buttons cleanly
+      # 2 breaks to to visually separate download buttons cleanly -----
       tags$br(),
       
       tags$br(),
       
-      # Download data
-      downloadButton("download_status_count",          # Status count
-                     label = "Download Status Count"),
+      # To download status count -----
+      downloadButton(
+        "download_status_count",          
+        label = "Download Status Count"
+      ),
       
-      # Horizontal line
+      # 2 breaks to to visually separate download buttons cleanly -----
+      tags$br(),
+      
+      tags$br(),
+      
+      # To download client count -----
+      downloadButton(
+        "download_client_count",          
+        label = "Download Client Count"
+      ),
+      
+      # Horizontal line -----
       tags$hr()
 
     ),
     
     #---------- DISPLAY MAIN OUTPUTS ----------
     
+    # Main panel -----
     mainPanel(
       
-      # Set tabs
+      # Set tabs -----
       tabsetPanel(
         
-         # 1st tab
-        tabPanel("Summary", 
+        # 1st tab -----
+        tabPanel(
+          title = "Summary", 
                  
-                 tableOutput(outputId = "program_count"),
-                 
-                 tableOutput(outputId = "status_count"),
-                 
-                 textOutput("count_records") 
-                 
-                 ), 
+          tableOutput(
+            outputId = "program_count"
+          ),
+         
+          tableOutput(
+            outputId = "status_count"
+          ),
+          
+          tableOutput(
+            outputId = "client_count"
+          ),
+         
+          textOutput(
+            outputId = "count_records"
+          ) 
+         
+        ), 
         
-        # 2nd tab           
-        tabPanel("Table", 
-                 
-                 DT::dataTableOutput("data_table")
-                 
-                 )
-      
+        # 2nd tab -----      
+        tabPanel(
+          title = "Table", 
+          DT::dataTableOutput("data_table")
+        )
+        
       )
     )
   )
@@ -97,21 +133,24 @@ server <- function(input, output) {
   
   #---------- IMPORT DATA ----------
   
+  # To retrieve data -----
   get_data <- reactive({
     
-    input_file <- input$file1
+    input_file <- input$import_file
     
     req(input_file)
     
-    read.csv(input_file$datapath, 
-             fileEncoding = "UTF-8-BOM") # Solves header weird characters issue
+    read.csv(
+      input_file$datapath, 
+      fileEncoding = "UTF-8-BOM" # to solve header weird characters issue
+    ) 
   
   })
   
   #---------- PROGRAM COUNT TABLE ----------
   
-  # Data manipulation
-  df_program_count <- reactive({
+  # Data manipulation -----
+  df_program_type_count <- reactive({
     get_data() %>% 
       mutate(
         `Program Type - Channel vs Consumer` = if_else(`Program_Type` == "Express Rebates",
@@ -128,16 +167,16 @@ server <- function(input, output) {
     
   })
   
-  # Output
+  # Output -----
   output$program_count <- renderTable({
     
-    df_program_count()
+    df_program_type_count()
     
   })
   
   #---------- STATUS COUNT TABLE ----------
   
-  # Data manipulation
+  # Data manipulation -----
   df_status_count <- reactive({
     get_data() %>% 
       mutate(
@@ -149,15 +188,46 @@ server <- function(input, output) {
         `Clean_Status`
       ) %>%
       summarize(
-        `Count` = n()
+        `Count` = n(),               # Count
+        `Sum` = sum(`Claim_Amount1`) # Sum
       )
     
   })
   
-  # Output
+  # Output -----
   output$status_count <- renderTable({
     
     df_status_count()
+    
+  })
+  
+  #---------- CLIENT COUNT TABLE ----------
+  
+  # Data manipulation -----
+  df_client_count <- reactive({
+    get_data() %>% 
+      group_by(
+        `Client1`
+      ) %>%
+      summarize(
+        `Count` = n(),               # Count
+        `Sum` = sum(`Claim_Amount1`) # Sum
+      )
+    
+  })
+  
+  # Output -----
+  output$client_count <- renderTable({
+    
+    df_client_count()
+    
+  })
+  
+  #---------- COUNT RECORDS ----------
+  
+  output$count_records <- renderText({
+    
+    paste0("Number of records is: ", nrow(get_data()))
     
   })
   
@@ -168,52 +238,75 @@ server <- function(input, output) {
     get_data()
     
   })
-  
-  #---------- COUNT RECORDS ----------
-  
-  output$count_records <- renderText({
-    
-    #df_count_records <- get_data()
-    
-    paste("Number of records is:", nrow(get_data()))
-    
-  })
-  
+
   #---------- DOWNLOAD DATA ----------
   
-  # Program count data
-  output$download_program_count <- downloadHandler(
+  # Program type count data -----
+  output$download_program_type_count <- downloadHandler(
     
+    # File name -----
     filename = function() { 
       
-      paste0("RADHOC Program Count Export - ", 
+      paste0("RADHOC Program Type Count Export - ", 
             Sys.Date(),
+            format(Sys.time(), " %H_%M_%S"), # prefix space for clean name
             ".csv")
     },
     
+    # Write data -----
     content = function(file) {
       
-      write.csv(df_program_count(),        # Change here what to download here
-                file,
-                row.names = FALSE) # remove row index
+      write.csv(
+        df_program_type_count(),
+        file,
+        row.names = FALSE # to remove row index
+      ) 
 
   })
   
-  # Status count data
+  # Status count data -----
   output$download_status_count <- downloadHandler(
     
+    # File name -----
     filename = function() { 
       
       paste0("RADHOC Status Count Export - ", 
              Sys.Date(),
+             format(Sys.time(), " %H_%M_%S"), # prefix space for clean name
              ".csv")
     },
     
+    # Write data -----
     content = function(file) {
       
-      write.csv(df_status_count(),        # Change here what to download here
-                file,
-                row.names = FALSE) # remove row index
+      write.csv(
+        df_status_count(),
+        file,
+        row.names = FALSE # to remove row index
+      )
+      
+  })
+  
+  # Client count data -----
+  output$download_client_count <- downloadHandler(
+    
+    # File name -----
+    filename = function() { 
+      
+      paste0("RADHOC Client Count Export - ", 
+             Sys.Date(),
+             format(Sys.time(), " %H_%M_%S"), # prefix space for clean name
+             ".csv")
+    },
+    
+    # Write data -----
+    content = function(file) {
+      
+      write.csv(
+        df_client_count(),
+        file,
+        row.names = FALSE # to remove row index
+      )
       
     })
 
