@@ -1,6 +1,6 @@
 #---
 # Author: Scott Henderson
-# Last Updated: June 19, 2020
+# Last Updated: June 22, 2020
 # Purpose: Summarize RADHOC query reports
 #---
 
@@ -45,7 +45,7 @@ ui <- fluidPage(
       
       # Company Logo -----
       img(
-        src = "360insights-logo.png", 
+        src = "360insights_logo.png", 
         height = 100, 
         width = 380
       ),
@@ -55,35 +55,25 @@ ui <- fluidPage(
       
       # To download program type count -----
       downloadButton(
-        "download_program_type_count",          
-        label = "Download Program Type Count"
-      ),
-      
-      # 2 breaks to to visually separate download buttons cleanly -----
-      tags$br(),
-      
-      tags$br(),
-      
-      # To download status count -----
-      downloadButton(
-        "download_status_count",          
-        label = "Download Status Count"
-      ),
-      
-      # 2 breaks to to visually separate download buttons cleanly -----
-      tags$br(),
-      
-      tags$br(),
-      
-      # To download client count -----
-      downloadButton(
-        "download_client_count",          
-        label = "Download Client Count"
+        "download_summary",          
+        label = "Download Summary"
       ),
       
       # Horizontal line -----
-      tags$hr()
-
+      tags$hr(),
+      
+      # Shiny Logo -----
+      tags$a(
+        href = "http://shiny.rstudio.com",
+        "Made with Shiny"
+      ),
+      
+      img(
+        src = "Shiny_Logo.png", 
+        height = 70, 
+        width = 200
+      )
+      
     ),
     
     #---------- DISPLAY MAIN OUTPUTS ----------
@@ -94,7 +84,7 @@ ui <- fluidPage(
       # Set tabs -----
       tabsetPanel(
         
-        # 1st tab -----
+        # Summary tab -----
         tabPanel(
           title = "Summary", 
                  
@@ -116,10 +106,10 @@ ui <- fluidPage(
          
         ), 
         
-        # 2nd tab -----      
+        # Table tab -----      
         tabPanel(
           title = "Table", 
-          DT::dataTableOutput("data_table")
+          DTOutput("data_table")
         )
         
       )
@@ -233,7 +223,7 @@ server <- function(input, output) {
   
   #---------- ENTIRE TABLE ----------
   
-  output$data_table <- DT::renderDataTable({
+  output$data_table <- renderDT({
     
     get_data()
     
@@ -241,74 +231,75 @@ server <- function(input, output) {
 
   #---------- DOWNLOAD DATA ----------
   
-  # Program type count data -----
-  output$download_program_type_count <- downloadHandler(
+  # Summary data -----
+  output$download_summary <- downloadHandler(
     
     # File name -----
     filename = function() { 
       
-      paste0("RADHOC Program Type Count Export - ", 
+      paste0("RADHOC Summary Export - ", 
             Sys.Date(),
-            format(Sys.time(), " %H_%M_%S"), # prefix space for clean name
-            ".csv")
+            format(Sys.time(), " %H.%M.%S"), # prefix space for clean name
+            ".xlsx")
     },
     
     # Write data -----
-    content = function(file) {
+    content = function(download_file) {
       
-      write.csv(
-        df_program_type_count(),
-        file,
-        row.names = FALSE # to remove row index
-      ) 
+      #---------- CREATE WORKBOOK ----------
+      
+      # Create workbook -----
+      
+      wb <- createWorkbook()
+      
+      # Add sheets -----
+      
+      addWorksheet(
+        wb, 
+        sheetName = "Program Type Count", 
+        tabColour = "#E6B8B7"             # Red
+      )
+      
+      addWorksheet(
+        wb, 
+        sheetName = "Status Count",       
+        tabColour = "#D8E4BC"             # Green
+      )
+      
+      addWorksheet(
+        wb, 
+        sheetName = "Client Count",       
+        tabColour = "#FFE699"             # Yellow
+      )
+      
+      # Write data -----
+      
+      writeData(
+        wb, 
+        sheet = "Program Type Count", 
+        x = df_program_type_count(), # Program Type Count
+      )
+      
+      writeData(
+        wb, 
+        sheet = "Status Count", 
+        x = df_status_count(),       # Status Count
+      )
+      
+      writeData(
+        wb, 
+        sheet = "Client Count", 
+        x = df_client_count(),       # Client Count
+      )
+      
+      # Save workbook -----
+
+      saveWorkbook(
+        wb,
+        file = download_file
+      )
 
   })
-  
-  # Status count data -----
-  output$download_status_count <- downloadHandler(
-    
-    # File name -----
-    filename = function() { 
-      
-      paste0("RADHOC Status Count Export - ", 
-             Sys.Date(),
-             format(Sys.time(), " %H_%M_%S"), # prefix space for clean name
-             ".csv")
-    },
-    
-    # Write data -----
-    content = function(file) {
-      
-      write.csv(
-        df_status_count(),
-        file,
-        row.names = FALSE # to remove row index
-      )
-      
-  })
-  
-  # Client count data -----
-  output$download_client_count <- downloadHandler(
-    
-    # File name -----
-    filename = function() { 
-      
-      paste0("RADHOC Client Count Export - ", 
-             Sys.Date(),
-             format(Sys.time(), " %H_%M_%S"), # prefix space for clean name
-             ".csv")
-    },
-    
-    # Write data -----
-    content = function(file) {
-      
-      write.csv(
-        df_client_count(),
-        file,
-        row.names = FALSE # to remove row index
-      )
-      
-    })
 
 }
 
