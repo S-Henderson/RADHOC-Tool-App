@@ -3,10 +3,12 @@
 
 # Purpose: Summarize and visualize RADHOC query reports in an R Shiny app
 
+# Input: RADHOC csv export
+# Output: Summary tables of common data calculations
+
 #--------------- LOAD LIBRARIES ---------------
 
 if (!require("pacman")) install.packages("pacman"); library(pacman)
-
 p_load("tidyverse", "readxl", "openxlsx", "shiny", "shinythemes", "DT")
 
 #---------- DEFINE UI ----------
@@ -81,7 +83,7 @@ ui <- fluidPage(
       ),
       
       img(
-        src = "Shiny_Logo.png", 
+        src = "Shiny_logo.png", 
         height = 70, 
         width = 200
       )
@@ -268,9 +270,9 @@ server <- function(input, output) {
     filename = function() { 
       
       paste0("RADHOC Summary Export - ", 
-            Sys.Date(),
-            format(Sys.time(), " %H.%M.%S"), # Prefix space for clean name
-            ".xlsx")
+             Sys.Date(),
+             format(Sys.time(), " %H.%M.%S"), # Prefix space for clean name
+             ".xlsx")
     
     },
     
@@ -279,7 +281,7 @@ server <- function(input, output) {
     content = function(download_file) {
       
       # Build summary workbook
-      source("./Scripts/reporting.R", local = TRUE)
+      source("./scripts/reporting.R", local = TRUE)
       
     }
   )
