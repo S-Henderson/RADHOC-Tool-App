@@ -4,7 +4,7 @@
 # Purpose: Summarize and visualize RADHOC query reports in an R Shiny app
 
 # Input: RADHOC csv export
-# Output: Summary tables of common data calculations
+# Output: Summary tables of common data analysis
 
 #--------------- LOAD LIBRARIES ---------------
 
